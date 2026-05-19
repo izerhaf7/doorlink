@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}DoorLink — Access Logs{% endblock %}
+{% block page_title %}Access Logs{% endblock %}
+
+{% block content %}
+<div class="card dl-card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="bi bi-journal-text me-2"></i>Seluruh Access Log</h6>
+        <span class="badge bg-primary">{{ logs|length }} entries</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table dl-table mb-0" id="logsTable">
+                <thead>
+                    <tr>
+                        <th>Waktu</th>
+                        <th>Username</th>
+                        <th>Method</th>
+                        <th>Status</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td class="text-nowrap">{{ log.created_at.strftime('%d %b %Y %H:%M:%S') if log.created_at else '-' }}</td>
+                        <td><code>{{ log.username }}</code></td>
+                        <td><span class="badge bg-light text-dark">{{ log.method }}</span></td>
+                        <td>
+                            {% if log.status == 'allowed' %}
+                                <span class="badge bg-success">Allowed</span>
+                            {% else %}
+                                <span class="badge bg-danger">Denied</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ log.message }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">Belum ada log akses.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

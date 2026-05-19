@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}DoorLink — Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon bg-blue-subtle"><i class="bi bi-people-fill text-blue"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ user_count }}</span>
+                <span class="stat-label">Total Users</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon bg-purple-subtle"><i class="bi bi-person-badge-fill text-purple"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ role_count }}</span>
+                <span class="stat-label">Roles</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon bg-teal-subtle"><i class="bi bi-journal-text text-teal"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ log_count }}</span>
+                <span class="stat-label">Access Logs</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon bg-orange-subtle"><i class="bi bi-wifi text-orange"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ hotspot_active_count }}</span>
+                <span class="stat-label">Hotspot Active</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MikroTik Status -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card dl-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <i class="bi bi-router-fill fs-4 {% if mikrotik_online %}text-success{% else %}text-danger{% endif %}"></i>
+                <div>
+                    <strong>MikroTik RouterOS</strong>
+                    {% if mikrotik_online %}
+                        <span class="badge bg-success ms-2">Online</span>
+                    {% else %}
+                        <span class="badge bg-danger ms-2">Offline</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Access Logs -->
+<div class="row">
+    <div class="col-12">
+        <div class="card dl-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>5 Log Akses Terbaru</h6>
+                <a href="/dashboard/logs" class="btn btn-sm btn-outline-primary">Lihat Semua</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table dl-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Waktu</th>
+                                <th>Username</th>
+                                <th>Method</th>
+                                <th>Status</th>
+                                <th>Message</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in recent_logs %}
+                            <tr>
+                                <td class="text-nowrap">{{ log.created_at.strftime('%d %b %Y %H:%M') if log.created_at else '-' }}</td>
+                                <td><code>{{ log.username }}</code></td>
+                                <td><span class="badge bg-light text-dark">{{ log.method }}</span></td>
+                                <td>
+                                    {% if log.status == 'allowed' %}
+                                        <span class="badge bg-success">Allowed</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Denied</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ log.message }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">Belum ada log akses.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

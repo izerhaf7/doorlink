@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}DoorLink — Users{% endblock %}
+{% block page_title %}User Management{% endblock %}
+
+{% block content %}
+<!-- Flash Messages -->
+{% if error %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+{% if success %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle-fill me-2"></i>{{ success }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <!-- User Table -->
+    <div class="col-12 col-xl-8">
+        <div class="card dl-card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-people-fill me-2"></i>Daftar User</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table dl-table mb-0" id="userTable">
+                        <thead>
+                            <tr>
+                                <th>Nama Lengkap</th>
+                                <th>Username</th>
+                                <th>Role</th>
+                                <th>Room</th>
+                                <th>Status</th>
+                                <th class="text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.full_name }}</td>
+                                <td><code>{{ user.username }}</code></td>
+                                <td><span class="badge bg-primary-subtle text-primary">{{ user.role_name }}</span></td>
+                                <td>{{ user.room_number or '—' }}</td>
+                                <td>
+                                    {% if user.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <form action="/dashboard/users/{{ user.username }}/delete" method="post" class="d-inline"
+                                          onsubmit="return confirm('Hapus user {{ user.username }}?')">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus user">
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">Belum ada user.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Form -->
+    <div class="col-12 col-xl-4">
+        <div class="card dl-card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-person-plus-fill me-2"></i>Tambah User Baru</h6>
+            </div>
+            <div class="card-body">
+                <form action="/dashboard/users" method="post" id="addUserForm">
+                    <div class="mb-3">
+                        <label for="full_name" class="form-label">Nama Lengkap</label>
+                        <input type="text" class="form-control" id="full_name" name="full_name" required
+                               placeholder="contoh: Ahmad Fauzi">
+                    </div>
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required
+                               placeholder="contoh: ahmad">
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required
+                               placeholder="Min. 4 karakter">
+                    </div>
+                    <div class="mb-3">
+                        <label for="role_name" class="form-label">Role</label>
+                        <select class="form-select" id="role_name" name="role_name" required>
+                            <option value="" disabled selected>Pilih role...</option>
+                            {% for role in roles %}
+                            <option value="{{ role.name }}">{{ role.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="room_number" class="form-label">Room Number <small class="text-muted">(opsional)</small></label>
+                        <input type="text" class="form-control" id="room_number" name="room_number"
+                               placeholder="contoh: A-101">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-plus-circle me-1"></i>Tambah User
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
