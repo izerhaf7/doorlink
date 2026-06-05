@@ -303,17 +303,16 @@ def dashboard_update_user(
     if not user or user.role_name != "owner":
         return RedirectResponse(url="/dashboard/doorlink", status_code=303)
 
-    target_user = session.exec(
-        select(User).where(User.username == username)
-    ).first()
-
-    if target_user:
-        target_user.full_name = full_name
-        target_user.role_name = role_name
-        target_user.room_number = room_number or None
-
-        session.add(target_user)
-        session.commit()
+    try:
+        user_service.update_user(
+            session=session,
+            username=username,
+            full_name=full_name,
+            role_name=role_name,
+            room_number=room_number or None,
+        )
+    except Exception:
+        pass
 
     return RedirectResponse(
         url="/dashboard/doorlink/admin/users",
@@ -542,35 +541,4 @@ def dashboard_admin_door_open(
             "logged_user": user,
             "guest_mode": False,
         },
-    )
-
-@router.post("/doorlink/admin/users/{username}/update", response_class=HTMLResponse)
-def dashboard_update_user(
-    request: Request,
-    username: str,
-    full_name: str = Form(...),
-    role_name: str = Form(...),
-    room_number: str = Form(None),
-    session: Session = Depends(get_session),
-):
-    user = get_logged_user(request, session)
-
-    if not user or user.role_name != "owner":
-        return RedirectResponse(url="/dashboard/doorlink", status_code=303)
-
-    target_user = session.exec(
-        select(User).where(User.username == username)
-    ).first()
-
-    if target_user:
-        target_user.full_name = full_name
-        target_user.role_name = role_name
-        target_user.room_number = room_number or None
-
-        session.add(target_user)
-        session.commit()
-
-    return RedirectResponse(
-        url="/dashboard/doorlink/admin/users",
-        status_code=303,
     )

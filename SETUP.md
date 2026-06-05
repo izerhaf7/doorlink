@@ -89,6 +89,8 @@ Dependensi yang akan terinstall:
 | `python-multipart` | Parsing form data |
 | `python-dotenv` | Load file `.env` |
 | `requests` | HTTP client ke MikroTik API |
+| `openpyxl` | Export access log ke Excel |
+| `pytest` / `httpx` | Test backend |
 
 ---
 
@@ -103,13 +105,32 @@ copy .env.example .env
 Edit file `.env` sesuai konfigurasi:
 
 ```env
-MIKROTIK_HOST=192.168.88.1
-MIKROTIK_USER=admin
-MIKROTIK_PASSWORD=yourpassword
+BACKEND_HOST=0.0.0.0
+BACKEND_PORT=8000
+
+# MASTER = MikroTik utama: gateway, HotSpot, captive portal, RADIUS client
+MIKROTIK_MASTER_HOST=10.10.13.10
+MIKROTIK_MASTER_USER=doorlink
+MIKROTIK_MASTER_PASSWORD=change-me
+MIKROTIK_MASTER_REST_SCHEME=http
+
+# RADIUS CHR = User Manager server untuk akun HotSpot
+MIKROTIK_RADIUS_HOST=10.10.13.6
+MIKROTIK_RADIUS_USER=admin
+MIKROTIK_RADIUS_PASSWORD=change-me
+MIKROTIK_RADIUS_REST_SCHEME=http
+MIKROTIK_RADIUS_SYNC_ENABLED=true
+
 DATABASE_URL=sqlite:///doorlink.db
 ```
 
-> **Jika tidak punya MikroTik:** Biarkan saja default. Dashboard akan menampilkan status **Offline** tanpa crash.
+Catatan:
+
+- Client, dashboard, dan ESP32 hanya perlu mengakses FastAPI DoorLink.
+- Backend internal yang mengakses MASTER dan RADIUS CHR.
+- Jika credential RADIUS belum benar, dashboard tetap berjalan; sync User Manager akan fallback dengan warning/log.
+
+> **Jika tidak punya MikroTik:** set `MIKROTIK_RADIUS_SYNC_ENABLED=false`. Dashboard akan tetap berjalan tanpa crash.
 
 ---
 
@@ -164,8 +185,17 @@ INFO:     Application startup complete.
 | GET | `/access/logs` | Semua access log |
 | GET | `/hotspot/users` | Daftar user hotspot |
 | GET | `/hotspot/active` | Session hotspot aktif |
-| GET | `/mikrotik/resource` | Info resource MikroTik |
+| GET | `/mikrotik/resource` | Legacy alias info resource MikroTik MASTER |
+| GET | `/api/mikrotik/master/resource` | Info resource MikroTik MASTER |
+| GET | `/api/mikrotik/master/hotspot/active` | Session HotSpot aktif di MASTER |
+| GET | `/api/mikrotik/master/hotspot/users` | User HotSpot lokal di MASTER untuk monitoring |
+| GET | `/api/radius/status` | Status koneksi backend ke RADIUS CHR/User Manager |
+| GET | `/api/radius/users` | Daftar user User Manager CHR |
+| POST | `/api/radius/users` | Buat user User Manager CHR |
+| PUT | `/api/radius/users/{username}` | Update password/disabled user CHR |
+| DELETE | `/api/radius/users/{username}` | Hapus user User Manager CHR |
 | GET | `/esp32/check-access/{username}` | Endpoint khusus ESP32 |
+| GET | `/esp32/door-command` | ESP32 polling command buka pintu |
 
 ---
 

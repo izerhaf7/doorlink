@@ -7,7 +7,7 @@ from app.models.role_model import Role
 from app.models.user_model import User  # noqa: F401 — agar SQLModel tahu tabel ini
 from app.models.access_log_model import AccessLog  # noqa: F401
 from app.routers import mikrotik_router, hotspot_router, user_router, access_router, esp32_router
-from app.routers import dashboard_router
+from app.routers import dashboard_router, radius_router
 
 app = FastAPI(
     title="DoorLink API",
@@ -25,6 +25,7 @@ app.include_router(user_router.router)
 app.include_router(access_router.router)
 app.include_router(esp32_router.router)
 app.include_router(dashboard_router.router)
+app.include_router(radius_router.router)
 
 
 # ── Default Roles ───────────────────────────────────────────

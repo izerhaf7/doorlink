@@ -1,9 +1,13 @@
-from sqlmodel import Session, select
-from fastapi import HTTPException
+import logging
 
-from app.models.user_model import User
+from fastapi import HTTPException
+from sqlmodel import Session, select
+
 from app.models.role_model import Role
-from app.services.mikrotik_service import mikrotik_service
+from app.models.user_model import User
+from app.services.radius_user_manager_service import radius_user_manager_service
+
+logger = logging.getLogger(__name__)
 
 
 def get_all_users(session: Session) -> list[User]:
@@ -27,23 +31,27 @@ def get_role_by_name(session: Session, role_name: str) -> Role:
     return role
 
 
-def create_user(session: Session, full_name: str, username: str, password: str,
-                role_name: str, room_number: str = None) -> User:
+def create_user(
+    session: Session,
+    full_name: str,
+    username: str,
+    password: str,
+    role_name: str,
+    room_number: str = None,
+) -> User:
     """
     Buat user DoorLink baru.
-    - Validasi role ada di database.
-    - Cek username belum dipakai.
-    - Jika role punya can_use_hotspot=True, buat juga user HotSpot di MikroTik.
+
+    Data aplikasi/role/RFID disimpan di SQLite. Jika role mengizinkan HotSpot,
+    backend mencoba sync ke User Manager CHR secara best-effort. Kegagalan CHR
+    tidak menggagalkan dashboard supaya demo DoorLink tetap stabil.
     """
-    # Cek duplikat username
     existing = session.exec(select(User).where(User.username == username)).first()
     if existing:
         raise HTTPException(status_code=400, detail=f"Username '{username}' sudah terdaftar")
 
-    # Validasi role
     role = get_role_by_name(session, role_name)
 
-    # Buat user di database lokal
     user = User(
         full_name=full_name,
         username=username,
@@ -55,25 +63,51 @@ def create_user(session: Session, full_name: str, username: str, password: str,
     session.commit()
     session.refresh(user)
 
-    # Buat user HotSpot di MikroTik jika role membolehkan
     if role.can_use_hotspot:
-        try:
-            mikrotik_service.create_hotspot_user(
-                name=username,
-                password=password,
-            )
-        except HTTPException as e:
-            # User sudah tersimpan di DB lokal, tapi gagal di MikroTik
-            # Untuk prototype: tetap lanjut, tapi beri warning di response
-            # (bisa diubah ke rollback di production)
-            pass
+        result = radius_user_manager_service.create_user_safe(username=username, password=password)
+        if not result.get("ok"):
+            logger.warning("SQLite user %s created, but RADIUS sync failed: %s", username, result)
 
     return user
 
 
-def delete_user(session: Session, username: str) -> dict:
-    """Hapus user berdasarkan username."""
+def update_user(
+    session: Session,
+    username: str,
+    *,
+    full_name: str,
+    role_name: str,
+    room_number: str = None,
+) -> User:
+    """Update data DoorLink SQLite. RADIUS password/profile sync can be added later."""
     user = get_user_by_username(session, username)
+    get_role_by_name(session, role_name)
+
+    user.full_name = full_name
+    user.role_name = role_name
+    user.room_number = room_number
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+
+def delete_user(session: Session, username: str) -> dict:
+    """Hapus user dari SQLite dan coba hapus dari CHR User Manager."""
+    user = get_user_by_username(session, username)
+    role = session.exec(select(Role).where(Role.name == user.role_name)).first()
+
+    # Delete local app user first: dashboard state must be authoritative for door access.
     session.delete(user)
     session.commit()
-    return {"message": f"User '{username}' berhasil dihapus"}
+
+    radius_result = None
+    if role and role.can_use_hotspot:
+        radius_result = radius_user_manager_service.delete_user_safe(username)
+        if not radius_result.get("ok"):
+            logger.warning("SQLite user %s deleted, but RADIUS delete sync failed: %s", username, radius_result)
+
+    return {
+        "message": f"User '{username}' berhasil dihapus",
+        "radius_sync": radius_result,
+    }
