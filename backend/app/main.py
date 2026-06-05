@@ -1,13 +1,20 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, select
 
+from app.config import MIKROTIK_RADIUS_AUTO_SYNC_ON_STARTUP
 from app.database import create_db_and_tables, engine
 from app.models.role_model import Role
 from app.models.user_model import User  # noqa: F401 — agar SQLModel tahu tabel ini
 from app.models.access_log_model import AccessLog  # noqa: F401
 from app.routers import mikrotik_router, hotspot_router, user_router, access_router, esp32_router
 from app.routers import dashboard_router, radius_router
+from app.services import user_service
+from app.services.radius_user_manager_service import radius_user_manager_service
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="DoorLink API",
@@ -66,10 +73,31 @@ def seed_roles():
 
 # ── Startup Event ───────────────────────────────────────────
 
+def sync_radius_on_startup() -> dict | None:
+    """Automatically reconcile DoorLink DB users to CHR User Manager on boot."""
+    if not MIKROTIK_RADIUS_AUTO_SYNC_ON_STARTUP:
+        logger.info("RADIUS startup auto-sync disabled by config")
+        return None
+    if not radius_user_manager_service.enabled:
+        logger.info("RADIUS startup auto-sync skipped because RADIUS sync is disabled")
+        return None
+
+    with Session(engine) as session:
+        result = user_service.sync_users_with_radius(session=session, delete_extra=False)
+        logger.info("RADIUS startup auto-sync result: %s", result)
+        return result
+
+
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
     seed_roles()
+    try:
+        sync_radius_on_startup()
+    except Exception as exc:
+        # Keep the API/dashboard reachable; strict per-user CRUD will still fail
+        # visibly until credentials/connectivity are corrected.
+        logger.warning("RADIUS startup auto-sync failed: %r", exc)
 
 
 # ── Root ────────────────────────────────────────────────────

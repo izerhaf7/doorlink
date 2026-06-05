@@ -7,6 +7,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app import main
 from app.models.role_model import Role
 from app.models.user_model import User
 from app.services import user_service
@@ -131,3 +132,30 @@ def test_reconcile_users_can_delete_extra_radius_users_when_requested(session, f
     assert ("delete", "legacy") in calls
     assert "legacy" not in remote_users
     assert result["deleted_extra_radius_users"] == ["legacy"]
+
+
+def test_startup_auto_sync_runs_when_enabled(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(main, "MIKROTIK_RADIUS_AUTO_SYNC_ON_STARTUP", True)
+    monkeypatch.setattr(radius_user_manager_service, "enabled", True)
+
+    def fake_sync(session, *, delete_extra=False):
+        calls.append(delete_extra)
+        return {"ok": True}
+
+    monkeypatch.setattr(main.user_service, "sync_users_with_radius", fake_sync)
+
+    result = main.sync_radius_on_startup()
+
+    assert result == {"ok": True}
+    assert calls == [False]
+
+
+def test_startup_auto_sync_skips_when_radius_disabled(monkeypatch):
+    monkeypatch.setattr(main, "MIKROTIK_RADIUS_AUTO_SYNC_ON_STARTUP", True)
+    monkeypatch.setattr(radius_user_manager_service, "enabled", False)
+
+    result = main.sync_radius_on_startup()
+
+    assert result is None

@@ -35,6 +35,10 @@ MIKROTIK_RADIUS_TIMEOUT = float(_env("MIKROTIK_RADIUS_TIMEOUT", "10"))
 MIKROTIK_RADIUS_SYNC_ENABLED = _env("MIKROTIK_RADIUS_SYNC_ENABLED", "true").lower() in {
     "1", "true", "yes", "on"
 }
+MIKROTIK_RADIUS_AUTO_SYNC_ON_STARTUP = _env(
+    "MIKROTIK_RADIUS_AUTO_SYNC_ON_STARTUP", "true"
+).lower() in {"1", "true", "yes", "on"}
 
 # Database Configuration
 DATABASE_URL = _env("DATABASE_URL", "sqlite:///doorlink.db")
+
