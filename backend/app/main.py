@@ -45,7 +45,7 @@ DEFAULT_ROLES = [
 
 
 def seed_roles():
-    """Insert default roles jika belum ada di database."""
+    """Insert/update default roles agar semua role DoorLink bisa memakai HotSpot."""
     with Session(engine) as session:
         for role in DEFAULT_ROLES:
             existing = session.exec(
@@ -53,6 +53,14 @@ def seed_roles():
             ).first()
             if not existing:
                 session.add(role)
+                continue
+
+            existing.can_use_hotspot = role.can_use_hotspot
+            existing.can_open_door = role.can_open_door
+            existing.can_use_rfid = role.can_use_rfid
+            existing.can_access_dashboard = role.can_access_dashboard
+            existing.is_limited = role.is_limited
+            session.add(existing)
         session.commit()
 
 

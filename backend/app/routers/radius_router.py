@@ -1,6 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlmodel import Session
 
-from app.schemas.radius_schema import RadiusUserCreate, RadiusUserUpdate
+from app.database import get_session
+from app.schemas.radius_schema import RadiusUserCreate, RadiusSyncRequest, RadiusUserUpdate
+from app.services import user_service
 from app.services.radius_user_manager_service import radius_user_manager_service
 
 router = APIRouter(prefix="/api/radius", tags=["RADIUS User Manager"])
@@ -41,3 +44,13 @@ def update_radius_user(username: str, payload: RadiusUserUpdate):
 def delete_radius_user(username: str):
     """Delete a User Manager account directly from the RADIUS CHR."""
     return radius_user_manager_service.delete_user(username)
+
+
+@router.post("/sync")
+def sync_radius_users(
+    payload: RadiusSyncRequest | None = None,
+    session: Session = Depends(get_session),
+):
+    """Reconcile DoorLink SQLite users into MikroTik CHR User Manager."""
+    delete_extra = payload.delete_extra if payload else False
+    return user_service.sync_users_with_radius(session=session, delete_extra=delete_extra)

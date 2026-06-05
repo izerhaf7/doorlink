@@ -9,3 +9,7 @@ class RadiusUserCreate(BaseModel):
 class RadiusUserUpdate(BaseModel):
     password: str | None = Field(default=None, min_length=1)
     disabled: bool | None = None
+
+
+class RadiusSyncRequest(BaseModel):
+    delete_extra: bool = False
