@@ -1,8 +1,11 @@
 from sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import datetime
+from datetime import timedelta
 
 
+def wib_now():
+    return datetime.utcnow() + timedelta(hours=7)
 class AccessLog(SQLModel, table=True):
     """Tabel access_logs — mencatat setiap percobaan akses pintu."""
 
@@ -13,4 +16,9 @@ class AccessLog(SQLModel, table=True):
     method: str  # "web", "rfid", "hotspot"
     status: str  # "allowed", "denied"
     message: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(
+    default_factory=wib_now
+)
+
+
+

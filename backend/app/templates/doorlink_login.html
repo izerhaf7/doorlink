@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DoorLink Login</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, Arial, sans-serif;
+      background: linear-gradient(135deg, #071526, #1e3a5f, #0b2f3a);
+      background-size: 220% 220%;
+      animation: bgMove 8s ease-in-out infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow: hidden;
+      color: #102033;
+    }
+
+    @keyframes bgMove {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(4px);
+      opacity: .55;
+      animation: float 7s ease-in-out infinite;
+    }
+
+    .orb.one {
+      width: 190px;
+      height: 190px;
+      background: rgba(42, 157, 92, .35);
+      top: 10%;
+      left: 10%;
+    }
+
+    .orb.two {
+      width: 240px;
+      height: 240px;
+      background: rgba(26, 111, 181, .38);
+      bottom: 8%;
+      right: 8%;
+      animation-delay: -2s;
+    }
+
+    .orb.three {
+      width: 110px;
+      height: 110px;
+      background: rgba(255, 255, 255, .18);
+      top: 62%;
+      left: 18%;
+      animation-delay: -4s;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(24px, -28px); }
+    }
+
+    .login-card {
+      position: relative;
+      width: 100%;
+      max-width: 440px;
+      background: rgba(255,255,255,.94);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,.5);
+      border-radius: 30px;
+      padding: 34px;
+      box-shadow: 0 30px 90px rgba(0,0,0,.38);
+      animation: cardIn .75s cubic-bezier(.2,.9,.2,1);
+      z-index: 2;
+    }
+
+    @keyframes cardIn {
+      from {
+        opacity: 0;
+        transform: translateY(34px) scale(.96);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .logo {
+      width: 60px;
+      height: 60px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #1a6fb5, #2a9d5c);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      box-shadow: 0 14px 30px rgba(26,111,181,.35);
+      animation: logoPulse 2.5s ease-in-out infinite;
+    }
+
+    @keyframes logoPulse {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 34px;
+      color: #1e3a5f;
+      letter-spacing: -.5px;
+    }
+
+    .brand p {
+      margin: 4px 0 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    h2 {
+      margin: 0 0 8px;
+      font-size: 23px;
+      color: #102033;
+    }
+
+    .subtitle {
+      margin: 0 0 24px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    .alert {
+      background: #fff0f0;
+      color: #b42318;
+      border: 1px solid #ffd0d0;
+      padding: 12px;
+      border-radius: 14px;
+      margin-bottom: 18px;
+      font-size: 14px;
+      animation: shake .25s ease-in-out;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    label {
+      display: block;
+      margin: 14px 0 7px;
+      font-size: 13px;
+      font-weight: 800;
+      color: #1e3a5f;
+    }
+
+    input {
+      width: 100%;
+      height: 50px;
+      border: 1px solid #d8e2ec;
+      border-radius: 15px;
+      padding: 0 15px;
+      font-size: 15px;
+      outline: none;
+      background: #f8fbfd;
+      transition: .2s;
+    }
+
+    input:focus {
+      border-color: #1a6fb5;
+      box-shadow: 0 0 0 4px rgba(26,111,181,.14);
+      transform: translateY(-1px);
+    }
+
+    button {
+      width: 100%;
+      height: 52px;
+      margin-top: 24px;
+      border: none;
+      border-radius: 17px;
+      background: linear-gradient(135deg, #1a6fb5, #2a9d5c);
+      color: white;
+      font-size: 16px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 14px 28px rgba(26,111,181,.28);
+      transition: .2s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.05);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .hint {
+      text-align: center;
+      margin-top: 20px;
+      color: #718096;
+      font-size: 12px;
+    }
+
+    .scan-line {
+      position: absolute;
+      inset: 0;
+      border-radius: 30px;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .scan-line::before {
+      content: "";
+      position: absolute;
+      left: -40%;
+      top: 0;
+      width: 40%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
+      animation: scan 4s ease-in-out infinite;
+    }
+
+    @keyframes scan {
+      0% { transform: translateX(0); opacity: 0; }
+      30% { opacity: .8; }
+      60% { opacity: 0; }
+      100% { transform: translateX(360%); opacity: 0; }
+    }
+
+    @media (max-width: 460px) {
+      .login-card {
+        padding: 26px;
+        border-radius: 24px;
+      }
+
+      h1 { font-size: 30px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="orb one"></div>
+  <div class="orb two"></div>
+  <div class="orb three"></div>
+
+  <main class="login-card">
+    <div class="scan-line"></div>
+
+    <div class="brand">
+      <div class="logo"><i class="bi bi-door-open-fill"></i></div>
+      <div>
+        <h1>DoorLink</h1>
+        <p>Smart Access System</p>
+      </div>
+    </div>
+
+    <h2>Masuk ke Dashboard</h2>
+    <p class="subtitle">Akses admin dan kontrol pintu pintar dalam satu sistem.</p>
+
+    {% if error %}
+      <div class="alert">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/dashboard/doorlink">
+      <label>Username</label>
+      <input type="text" name="username" placeholder="Masukkan username" required>
+
+      <label>Password</label>
+      <input type="password" name="password" placeholder="Masukkan password" required>
+
+      <button type="submit">Masuk ke DoorLink</button>
+    </form>
+
+    <div class="hint">Owner masuk ke dashboard admin • Guest masuk ke akses pintu</div>
+  </main>
+</body>
+</html>

@@ -62,7 +62,7 @@ def open_door(session: Session, username: str) -> dict:
             username=username,
             method="web",
             status="allowed",
-            message="Pintu dibuka (simulasi)",
+            message="Pintu dibuka(lewat Dashboard)",
         )
     else:
         log = AccessLog(
@@ -105,7 +105,7 @@ def esp32_check_access(session: Session, username: str) -> dict:
             username=username,
             method="esp32",
             status="allowed",
-            message="ESP32 simulation access allowed",
+            message="Pintu dibuka(lewat RFID)",
         )
         response_message = "Access granted"
     else:

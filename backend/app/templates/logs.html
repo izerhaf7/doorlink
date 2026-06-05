@@ -3,46 +3,462 @@
 {% block page_title %}Access Logs{% endblock %}
 
 {% block content %}
-<div class="card dl-card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="mb-0"><i class="bi bi-journal-text me-2"></i>Seluruh Access Log</h6>
-        <span class="badge bg-primary">{{ logs|length }} entries</span>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table dl-table mb-0" id="logsTable">
-                <thead>
-                    <tr>
-                        <th>Waktu</th>
-                        <th>Username</th>
-                        <th>Method</th>
-                        <th>Status</th>
-                        <th>Message</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for log in logs %}
-                    <tr>
-                        <td class="text-nowrap">{{ log.created_at.strftime('%d %b %Y %H:%M:%S') if log.created_at else '-' }}</td>
-                        <td><code>{{ log.username }}</code></td>
-                        <td><span class="badge bg-light text-dark">{{ log.method }}</span></td>
-                        <td>
-                            {% if log.status == 'allowed' %}
-                                <span class="badge bg-success">Allowed</span>
-                            {% else %}
-                                <span class="badge bg-danger">Denied</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ log.message }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="5" class="text-center text-muted py-4">Belum ada log akses.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+<style>
+    .logs-page {
+        animation: logsFadeIn .55s ease both;
+    }
+
+    .logs-panel {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(34,211,238,.28) !important;
+        border-radius: 26px !important;
+        background:
+            linear-gradient(135deg, rgba(255,255,255,.10), rgba(255,255,255,.045)) !important;
+        box-shadow:
+            0 24px 80px rgba(0,0,0,.28),
+            inset 0 1px 0 rgba(255,255,255,.14) !important;
+        backdrop-filter: blur(18px);
+    }
+
+    .logs-panel::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+            120deg,
+            transparent 20%,
+            rgba(255,255,255,.13),
+            transparent 72%
+        );
+        transform: translateX(-130%);
+        animation: logsShine 5.8s ease-in-out infinite;
+        pointer-events: none;
+    }
+
+    .logs-panel .card-header {
+        position: relative;
+        z-index: 1;
+        background: rgba(255,255,255,.055) !important;
+        border-bottom: 1px solid rgba(125,211,252,.20) !important;
+        padding: 18px 20px;
+    }
+
+    .logs-panel .card-header h6 {
+        color: #f8fbff;
+        font-size: 1.05rem;
+        font-weight: 900;
+    }
+
+    .logs-panel .card-header i {
+        color: #7dd3fc;
+        filter: drop-shadow(0 0 10px rgba(34,211,238,.65));
+    }
+
+    .entries-badge {
+        background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
+        color: #ffffff !important;
+        border-radius: 999px;
+        padding: .55rem .8rem;
+        font-weight: 900;
+        box-shadow: 0 0 18px rgba(59,130,246,.35);
+    }
+
+    .clear-logs-btn {
+        height: 36px;
+        padding: 0 14px;
+        border-radius: 999px !important;
+        color: #fb7185 !important;
+        border: 1px solid rgba(244,63,94,.45) !important;
+        background: rgba(244,63,94,.08) !important;
+        font-weight: 900 !important;
+        transition: .22s ease;
+    }
+
+    .clear-logs-btn:hover {
+        color: #fff !important;
+        background: #f43f5e !important;
+        transform: translateY(-2px);
+        box-shadow: 0 0 26px rgba(244,63,94,.45);
+    }
+
+    .dl-table {
+        color: #eaf6ff !important;
+        margin: 0;
+    }
+
+    .dl-table thead th {
+        background: rgba(255,255,255,.06) !important;
+        color: #a9c8dc !important;
+        border-color: rgba(125,211,252,.14) !important;
+        font-size: .78rem;
+        letter-spacing: .075em;
+        text-transform: uppercase;
+        font-weight: 900;
+        padding: 15px 14px;
+    }
+
+    .dl-table tbody td {
+        color: #eaf6ff !important;
+        border-color: rgba(125,211,252,.12) !important;
+        padding: 16px 14px;
+        vertical-align: middle;
+        font-weight: 650;
+    }
+
+    .dl-table tbody tr {
+        transition: .22s ease;
+    }
+
+    .dl-table tbody tr:hover {
+        background: rgba(34,211,238,.075) !important;
+        transform: scale(1.004);
+    }
+
+    .dl-table code {
+        color: #f472b6 !important;
+        font-weight: 850;
+    }
+
+    .method-badge {
+        color: #eaf6ff !important;
+        background: rgba(255,255,255,.10) !important;
+        border: 1px solid rgba(255,255,255,.10);
+        border-radius: 10px;
+        padding: .42rem .62rem;
+        font-weight: 850;
+    }
+
+    .status-allowed {
+        background: linear-gradient(135deg, #16a34a, #22c55e) !important;
+        box-shadow: 0 0 18px rgba(34,197,94,.35);
+        border-radius: 10px;
+        padding: .42rem .68rem;
+        font-weight: 850;
+    }
+
+    .status-denied {
+        background: linear-gradient(135deg, #e11d48, #f43f5e) !important;
+        box-shadow: 0 0 18px rgba(244,63,94,.35);
+        border-radius: 10px;
+        padding: .42rem .68rem;
+        font-weight: 850;
+    }
+
+    .empty-log {
+        color: #9fb4c9 !important;
+        padding: 36px !important;
+    }
+
+    /* MODAL PAKAI DIALOG, BIAR PASTI MUNCUL */
+    .clear-log-dialog {
+        width: min(470px, calc(100vw - 34px));
+        border: 1px solid rgba(244,63,94,.40);
+        border-radius: 28px;
+        padding: 0;
+        background: transparent;
+        color: #fff;
+        overflow: visible;
+    }
+
+    .clear-log-dialog::backdrop {
+        background: rgba(2,8,18,.78);
+        backdrop-filter: blur(12px);
+    }
+
+    .clear-modal-box {
+        position: relative;
+        overflow: hidden;
+        padding: 28px;
+        border-radius: 28px;
+        background:
+            radial-gradient(circle at 80% 0%, rgba(244,63,94,.22), transparent 38%),
+            linear-gradient(135deg, #102033, #081220);
+        box-shadow:
+            0 30px 100px rgba(0,0,0,.65),
+            0 0 55px rgba(244,63,94,.22),
+            inset 0 1px 0 rgba(255,255,255,.12);
+        animation: modalPop .25s ease both;
+    }
+
+    .clear-modal-icon {
+        width: 70px;
+        height: 70px;
+        margin-bottom: 18px;
+        border-radius: 24px;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        font-size: 2rem;
+        background: linear-gradient(135deg, #fb7185, #e11d48);
+        box-shadow: 0 0 38px rgba(244,63,94,.42);
+    }
+
+    .clear-modal-box h3 {
+        margin: 0 0 8px;
+        color: #fff;
+        font-size: 1.55rem;
+        font-weight: 950;
+        letter-spacing: -.04em;
+    }
+
+    .clear-modal-box p {
+        margin: 0;
+        color: #cbd5e1;
+        line-height: 1.65;
+        font-weight: 650;
+    }
+
+    .clear-log-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        color: #fbcfe8;
+        background: rgba(244,63,94,.12);
+        border: 1px solid rgba(244,63,94,.30);
+        font-weight: 900;
+    }
+
+    .clear-modal-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 26px;
+    }
+
+    .modal-cancel-btn,
+    .modal-confirm-btn {
+        flex: 1;
+        height: 48px;
+        border-radius: 16px;
+        font-weight: 950;
+        transition: .22s ease;
+    }
+
+    .modal-cancel-btn {
+        color: #dbeafe;
+        background: rgba(255,255,255,.10);
+        border: 1px solid rgba(255,255,255,.18);
+    }
+
+    .modal-cancel-btn:hover {
+        background: rgba(255,255,255,.16);
+        transform: translateY(-2px);
+    }
+
+    .modal-confirm-btn {
+        color: #fff;
+        background: linear-gradient(135deg, #fb7185, #e11d48);
+        border: 0;
+        box-shadow: 0 0 28px rgba(244,63,94,.32);
+    }
+
+    .modal-confirm-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 42px rgba(244,63,94,.48);
+    }
+
+    .modal-confirm-btn:disabled {
+        opacity: .8;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    @keyframes logsFadeIn {
+        from { opacity: 0; transform: translateY(18px); }
+        to { opacity: 1; transform: none; }
+    }
+
+    @keyframes logsShine {
+        0%, 38% { transform: translateX(-130%); }
+        58%, 100% { transform: translateX(130%); }
+    }
+
+    @keyframes modalPop {
+        from { opacity: 0; transform: translateY(22px) scale(.94); }
+        to { opacity: 1; transform: none; }
+    }
+</style>
+
+<div class="logs-page">
+    <div class="card logs-panel">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">
+                <i class="bi bi-journal-text me-2"></i>
+                Seluruh Access Log
+            </h6>
+
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="badge entries-badge">
+                {{ logs|length }} entries
+            </span>
+
+            <a href="/dashboard/doorlink/admin/logs/export/csv"
+            class="btn btn-sm export-btn">
+                <i class="bi bi-filetype-csv me-1"></i>
+                CSV
+            </a>
+
+            <a href="/dashboard/doorlink/admin/logs/export/excel"
+            class="btn btn-sm export-btn">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i>
+                Excel
+            </a>
+
+            <button type="button"
+                    class="btn btn-sm old-clear-btn"
+                    data-days="7">
+                <i class="bi bi-calendar-x me-1"></i>
+                Older 7D
+            </button>
+
+            <button type="button"
+                    class="btn btn-sm old-clear-btn"
+                    data-days="30">
+                <i class="bi bi-calendar-x me-1"></i>
+                Older 30D
+            </button>
+
+            <button type="button"
+                    class="btn btn-sm clear-logs-btn"
+                    id="clearLogsBtn"
+                    {% if logs|length == 0 %}disabled{% endif %}>
+                <i class="bi bi-trash3 me-1"></i>
+                Clear Logs
+            </button>
+        </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table dl-table mb-0" id="logsTable">
+                    <thead>
+                        <tr>
+                            <th>Waktu</th>
+                            <th>Username</th>
+                            <th>Method</th>
+                            <th>Status</th>
+                            <th>Message</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td class="text-nowrap">
+                                {{ log.created_at.strftime('%d %b %Y %H:%M:%S') if log.created_at else '-' }}
+                            </td>
+
+                            <td>
+                                <code>{{ log.username }}</code>
+                            </td>
+
+                            <td>
+                                <span class="badge method-badge">
+                                    {{ log.method }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {% if log.status == 'allowed' %}
+                                    <span class="badge status-allowed">Allowed</span>
+                                {% else %}
+                                    <span class="badge status-denied">Denied</span>
+                                {% endif %}
+                            </td>
+
+                            <td>{{ log.message }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center empty-log">
+                                Belum ada log akses.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
+
+<dialog class="clear-log-dialog" id="clearLogsDialog">
+    <div class="clear-modal-box">
+        <div class="clear-modal-icon">
+            <i class="bi bi-trash3-fill"></i>
+        </div>
+
+        <h3>Hapus Semua Log?</h3>
+
+        <p>
+            Semua access log akan dihapus permanen dari sistem DoorLink.
+            Aksi ini tidak dapat dibatalkan setelah dikonfirmasi.
+        </p>
+
+        <div class="clear-log-pill">
+            <i class="bi bi-journal-x"></i>
+            {{ logs|length }} log akan dihapus
+        </div>
+
+        <div class="clear-modal-actions">
+            <button type="button" class="modal-cancel-btn" id="cancelClearLogsBtn">
+                Batal
+            </button>
+
+            <form
+                action="/dashboard/doorlink/admin/logs/clear"
+                method="post"
+                id="clearLogsForm"
+                class="flex-fill"
+            >
+                <button type="submit" class="modal-confirm-btn w-100" id="confirmClearLogsBtn">
+                    <i class="bi bi-trash3 me-1"></i>
+                    Hapus Semua
+                </button>
+            </form>
+        </div>
+    </div>
+</dialog>
+
+<script>
+    const clearLogsBtn = document.getElementById('clearLogsBtn');
+    const clearLogsDialog = document.getElementById('clearLogsDialog');
+    const cancelClearLogsBtn = document.getElementById('cancelClearLogsBtn');
+    const clearLogsForm = document.getElementById('clearLogsForm');
+    const confirmClearLogsBtn = document.getElementById('confirmClearLogsBtn');
+
+    if (clearLogsBtn) {
+        clearLogsBtn.addEventListener('click', function() {
+            clearLogsDialog.showModal();
+        });
+    }
+
+    cancelClearLogsBtn.addEventListener('click', function() {
+        clearLogsDialog.close();
+
+        confirmClearLogsBtn.disabled = false;
+        confirmClearLogsBtn.innerHTML =
+            '<i class="bi bi-trash3 me-1"></i>Hapus Semua';
+    });
+
+    clearLogsDialog.addEventListener('click', function(e) {
+        const modalBox = clearLogsDialog.querySelector('.clear-modal-box');
+
+        if (!modalBox.contains(e.target)) {
+            clearLogsDialog.close();
+        }
+    });
+
+    clearLogsForm.addEventListener('submit', function() {
+        confirmClearLogsBtn.disabled = true;
+        confirmClearLogsBtn.innerHTML =
+            '<span class="spinner-border spinner-border-sm me-2"></span>Menghapus...';
+    });
+</script>
+
 {% endblock %}

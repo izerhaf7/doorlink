@@ -1,28 +1,25 @@
 {% extends "base.html" %}
 {% block title %}DoorLink — Door Simulation{% endblock %}
-{% block page_title %}Door Access Simulation{% endblock %}
+{% block page_title %}Door Access{% endblock %}
 
 {% block content %}
 <div class="row g-4">
     <div class="col-12 col-lg-5">
         <div class="card dl-card">
             <div class="card-header">
-                <h6 class="mb-0"><i class="bi bi-shield-lock-fill me-2"></i>Simulasi Akses Pintu</h6>
+                <h6 class="mb-0"><i class="bi bi-shield-lock-fill me-2"></i>Akses Pintu</h6>
             </div>
             <div class="card-body">
-                <div class="mb-3">
-                    <label for="doorUsername" class="form-label">Username</label>
-                    <input type="text" class="form-control" id="doorUsername" placeholder="Masukkan username" value="{{ form_username or '' }}">
-                </div>
                 <div class="d-flex gap-2">
-                    <form action="/dashboard/door/check" method="post" class="flex-fill" id="checkForm">
-                        <input type="hidden" name="username" id="checkUsername">
-                        <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search me-1"></i>Check Access</button>
-                    </form>
-                    <form action="/dashboard/door/open" method="post" class="flex-fill" id="openForm">
-                        <input type="hidden" name="username" id="openUsername">
-                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-door-open me-1"></i>Open Door</button>
-                    </form>
+                    <form action="{% if guest_mode %}/dashboard/doorlink/guest/open{% else %}/dashboard/doorlink/admin/door/open{% endif %}" method="post">
+                    <label for="doorUsername" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="doorUsername" name="username"
+                        value="{{ form_username or '' }}" {% if guest_mode %}readonly{% endif %}>
+
+                    <button type="submit" class="btn btn-primary w-100 mt-3">
+                        <i class="bi bi-door-open"></i> Open Door
+                    </button>
+                </form>
                 </div>
             </div>
         </div>
@@ -31,6 +28,7 @@
         {% if result %}
         <div class="card dl-card door-result-card {% if result.allowed %}result-allowed{% else %}result-denied{% endif %}">
             <div class="card-body text-center py-5">
+                <div class="door-visual"><div class="door-frame"></div><div class="door-panel"></div></div>
                 {% if result.allowed %}
                 <div class="door-icon-wrap allowed-bg mb-3"><i class="bi bi-check-circle-fill display-3 text-success"></i></div>
                 <h4 class="text-success mb-2">ACCESS ALLOWED</h4>
@@ -49,7 +47,7 @@
         <div class="card dl-card">
             <div class="card-body text-center py-5 text-muted">
                 <i class="bi bi-door-closed display-4 mb-3 d-block opacity-25"></i>
-                <p class="mb-0">Masukkan username dan pilih aksi untuk memulai simulasi.</p>
+                <p class="mb-0">Masukkan username untuk membuka pintu.</p>
             </div>
         </div>
         {% endif %}
@@ -60,13 +58,11 @@
 {% block scripts %}
 <script>
 const doorInput = document.getElementById('doorUsername');
-document.getElementById('checkForm').addEventListener('submit', function(e) {
-    document.getElementById('checkUsername').value = doorInput.value;
+const doorForm = doorInput ? doorInput.closest('form') : null;
+if (doorForm) {
+  doorForm.addEventListener('submit', function(e) {
     if (!doorInput.value.trim()) { e.preventDefault(); doorInput.focus(); }
-});
-document.getElementById('openForm').addEventListener('submit', function(e) {
-    document.getElementById('openUsername').value = doorInput.value;
-    if (!doorInput.value.trim()) { e.preventDefault(); doorInput.focus(); }
-});
+  });
+}
 </script>
 {% endblock %}

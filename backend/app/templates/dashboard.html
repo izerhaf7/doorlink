@@ -3,110 +3,728 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-<!-- Stat Cards -->
-<div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3">
-        <div class="stat-card">
-            <div class="stat-icon bg-blue-subtle"><i class="bi bi-people-fill text-blue"></i></div>
-            <div class="stat-info">
-                <span class="stat-value">{{ user_count }}</span>
-                <span class="stat-label">Total Users</span>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card">
-            <div class="stat-icon bg-purple-subtle"><i class="bi bi-person-badge-fill text-purple"></i></div>
-            <div class="stat-info">
-                <span class="stat-value">{{ role_count }}</span>
-                <span class="stat-label">Roles</span>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card">
-            <div class="stat-icon bg-teal-subtle"><i class="bi bi-journal-text text-teal"></i></div>
-            <div class="stat-info">
-                <span class="stat-value">{{ log_count }}</span>
-                <span class="stat-label">Access Logs</span>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card">
-            <div class="stat-icon bg-orange-subtle"><i class="bi bi-wifi text-orange"></i></div>
-            <div class="stat-info">
-                <span class="stat-value">{{ hotspot_active_count }}</span>
-                <span class="stat-label">Hotspot Active</span>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- MikroTik Status -->
-<div class="row g-3 mb-4">
-    <div class="col-12">
-        <div class="card dl-card">
-            <div class="card-body d-flex align-items-center gap-3">
-                <i class="bi bi-router-fill fs-4 {% if mikrotik_online %}text-success{% else %}text-danger{% endif %}"></i>
-                <div>
-                    <strong>MikroTik RouterOS</strong>
-                    {% if mikrotik_online %}
-                        <span class="badge bg-success ms-2">Online</span>
-                    {% else %}
-                        <span class="badge bg-danger ms-2">Offline</span>
-                    {% endif %}
+<style>
+    .dashboard-page {
+        animation: dashboardFadeIn .55s ease both;
+    }
+
+    .dashboard-hero {
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 24px;
+        padding: 28px 30px;
+        border-radius: 28px;
+        border: 1px solid rgba(34,211,238,.28);
+        background:
+            radial-gradient(circle at 80% 30%, rgba(34,211,238,.20), transparent 28%),
+            linear-gradient(135deg, rgba(255,255,255,.11), rgba(255,255,255,.045));
+        box-shadow:
+            0 24px 80px rgba(0,0,0,.28),
+            inset 0 1px 0 rgba(255,255,255,.14);
+        backdrop-filter: blur(18px);
+    }
+
+    .dashboard-hero::before,
+    .dashboard-panel::before,
+    .premium-stat-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+            120deg,
+            transparent 20%,
+            rgba(255,255,255,.13),
+            transparent 72%
+        );
+        transform: translateX(-130%);
+        animation: dashboardShine 6s ease-in-out infinite;
+        pointer-events: none;
+    }
+
+    .dashboard-hero h2 {
+        position: relative;
+        z-index: 1;
+        margin: 0;
+        color: #f8fbff;
+        font-size: clamp(1.75rem, 3vw, 2.6rem);
+        font-weight: 950;
+        letter-spacing: -.055em;
+    }
+
+    .dashboard-hero p {
+        position: relative;
+        z-index: 1;
+        margin: 8px 0 0;
+        color: #9fb4c9;
+        font-size: 1.02rem;
+        font-weight: 650;
+    }
+
+    .hero-badge {
+        position: relative;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 14px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        color: #aef5ff;
+        background: rgba(34,211,238,.12);
+        border: 1px solid rgba(34,211,238,.30);
+        font-size: .8rem;
+        font-weight: 900;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+    }
+
+    .hero-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #22c55e;
+        box-shadow: 0 0 14px rgba(34,197,94,.9);
+        animation: dashboardPulseDot 1.45s infinite;
+    }
+
+    .premium-stat-card {
+        position: relative;
+        overflow: hidden;
+        min-height: 150px;
+        padding: 24px;
+        border-radius: 26px;
+        border: 1px solid rgba(125,211,252,.24);
+        background:
+            linear-gradient(135deg, rgba(255,255,255,.105), rgba(255,255,255,.045));
+        box-shadow:
+            0 24px 75px rgba(0,0,0,.25),
+            inset 0 1px 0 rgba(255,255,255,.14);
+        backdrop-filter: blur(18px);
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        transition: .25s ease;
+        animation: dashboardCardUp .58s ease both;
+    }
+
+    .premium-stat-card:hover {
+        transform: translateY(-7px) scale(1.01);
+        border-color: rgba(34,211,238,.70);
+        box-shadow:
+            0 30px 95px rgba(0,0,0,.35),
+            0 0 44px rgba(34,211,238,.18),
+            inset 0 1px 0 rgba(255,255,255,.17);
+    }
+
+    .row .col-6:nth-child(1) .premium-stat-card { animation-delay: .04s; }
+    .row .col-6:nth-child(2) .premium-stat-card { animation-delay: .10s; }
+    .row .col-6:nth-child(3) .premium-stat-card { animation-delay: .16s; }
+    .row .col-6:nth-child(4) .premium-stat-card { animation-delay: .22s; }
+
+    .premium-stat-icon {
+        position: relative;
+        z-index: 1;
+        width: 68px;
+        height: 68px;
+        flex: 0 0 68px;
+        border-radius: 22px;
+        display: grid;
+        place-items: center;
+        background: rgba(255,255,255,.10);
+        border: 1px solid rgba(255,255,255,.12);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,.18),
+            0 0 32px rgba(34,211,238,.16);
+    }
+
+    .premium-stat-icon i {
+        font-size: 1.85rem;
+    }
+
+    .icon-blue i { color: #38bdf8; filter: drop-shadow(0 0 12px rgba(56,189,248,.65)); }
+    .icon-purple i { color: #a78bfa; filter: drop-shadow(0 0 12px rgba(167,139,250,.65)); }
+    .icon-teal i { color: #2dd4bf; filter: drop-shadow(0 0 12px rgba(45,212,191,.65)); }
+    .icon-orange i { color: #fb923c; filter: drop-shadow(0 0 12px rgba(251,146,60,.65)); }
+
+    .premium-stat-info {
+        position: relative;
+        z-index: 1;
+    }
+
+    .premium-stat-value {
+        display: block;
+        color: #fff;
+        font-size: 2.65rem;
+        line-height: 1;
+        font-weight: 950;
+        letter-spacing: -.05em;
+        text-shadow: 0 0 20px rgba(34,211,238,.34);
+    }
+
+    .premium-stat-label {
+        display: block;
+        margin-top: 8px;
+        color: #9fb4c9;
+        font-weight: 850;
+    }
+
+    .mini-spark {
+        position: absolute;
+        right: 20px;
+        bottom: 18px;
+        width: 100px;
+        height: 34px;
+        opacity: .78;
+    }
+
+    .mini-spark svg {
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+    }
+
+    .mini-spark path {
+        fill: none;
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-dasharray: 160;
+        stroke-dashoffset: 160;
+        animation: sparkDraw 2.2s ease forwards;
+    }
+
+    .spark-blue { stroke: #38bdf8; filter: drop-shadow(0 0 8px rgba(56,189,248,.7)); }
+    .spark-purple { stroke: #a78bfa; filter: drop-shadow(0 0 8px rgba(167,139,250,.7)); }
+    .spark-teal { stroke: #2dd4bf; filter: drop-shadow(0 0 8px rgba(45,212,191,.7)); }
+    .spark-orange { stroke: #fb923c; filter: drop-shadow(0 0 8px rgba(251,146,60,.7)); }
+
+    .dashboard-panel {
+        position: relative;
+        overflow: hidden;
+        border-radius: 26px !important;
+        border: 1px solid rgba(34,211,238,.24) !important;
+        background:
+            linear-gradient(135deg, rgba(255,255,255,.10), rgba(255,255,255,.045)) !important;
+        box-shadow:
+            0 24px 80px rgba(0,0,0,.26),
+            inset 0 1px 0 rgba(255,255,255,.14) !important;
+        backdrop-filter: blur(18px);
+    }
+
+    .router-panel .card-body {
+        position: relative;
+        z-index: 1;
+        min-height: 110px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 22px;
+        padding: 24px 28px;
+    }
+
+    .router-left {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+    }
+
+    .router-icon-wrap {
+        position: relative;
+        width: 68px;
+        height: 68px;
+        border-radius: 22px;
+        display: grid;
+        place-items: center;
+        background: rgba(34,197,94,.12);
+        border: 1px solid rgba(34,197,94,.30);
+        box-shadow: 0 0 28px rgba(34,197,94,.20);
+    }
+
+    .router-icon-wrap i {
+        font-size: 2rem;
+        color: #22c55e;
+        filter: drop-shadow(0 0 14px rgba(34,197,94,.65));
+    }
+
+    .router-icon-wrap.offline {
+        background: rgba(244,63,94,.11);
+        border-color: rgba(244,63,94,.32);
+        box-shadow: 0 0 28px rgba(244,63,94,.16);
+    }
+
+    .router-icon-wrap.offline i {
+        color: #fb7185;
+        filter: drop-shadow(0 0 14px rgba(244,63,94,.65));
+    }
+
+    .router-icon-wrap.online::after {
+        content: "";
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        background: #22c55e;
+        box-shadow: 0 0 14px rgba(34,197,94,.9);
+        animation: dashboardPulseDot 1.45s infinite;
+    }
+
+    .router-title {
+        color: #f8fbff;
+        font-size: 1.2rem;
+        font-weight: 950;
+    }
+
+    .router-subtitle {
+        margin-top: 4px;
+        color: #9fb4c9;
+        font-size: .94rem;
+        font-weight: 650;
+    }
+
+    .router-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-left: 8px;
+        padding: .45rem .7rem;
+        border-radius: 999px;
+        font-weight: 900;
+        font-size: .78rem;
+    }
+
+    .router-badge.online {
+        color: #dcfce7;
+        background: linear-gradient(135deg, #16a34a, #22c55e);
+        box-shadow: 0 0 22px rgba(34,197,94,.38);
+    }
+
+    .router-badge.offline {
+        color: #ffe4e6;
+        background: linear-gradient(135deg, #e11d48, #f43f5e);
+        box-shadow: 0 0 22px rgba(244,63,94,.38);
+    }
+
+    .router-wave {
+        flex: 1;
+        max-width: 380px;
+        opacity: .82;
+    }
+
+    .router-wave svg {
+        width: 100%;
+        height: 54px;
+        overflow: visible;
+    }
+
+    .router-wave path {
+        fill: none;
+        stroke: #22c55e;
+        stroke-width: 3;
+        stroke-linecap: round;
+        filter: drop-shadow(0 0 10px rgba(34,197,94,.75));
+        stroke-dasharray: 400;
+        stroke-dashoffset: 400;
+        animation: waveDraw 2.4s ease infinite;
+    }
+
+    .router-wave.offline path {
+        stroke: #fb7185;
+        filter: drop-shadow(0 0 10px rgba(244,63,94,.75));
+    }
+
+    .dashboard-panel .card-header {
+        position: relative;
+        z-index: 1;
+        padding: 18px 20px;
+        border-bottom: 1px solid rgba(125,211,252,.18) !important;
+        background: rgba(255,255,255,.055) !important;
+    }
+
+    .dashboard-panel .card-header h6 {
+        color: #f8fbff;
+        font-size: 1.05rem;
+        font-weight: 950;
+    }
+
+    .dashboard-panel .card-header i {
+        color: #7dd3fc;
+        filter: drop-shadow(0 0 10px rgba(34,211,238,.65));
+    }
+
+    .dashboard-panel .btn-outline-primary {
+        color: #9eeaff !important;
+        border-color: rgba(34,211,238,.45) !important;
+        background: rgba(34,211,238,.07) !important;
+        border-radius: 14px !important;
+        font-weight: 900 !important;
+        transition: .22s ease;
+    }
+
+    .dashboard-panel .btn-outline-primary:hover {
+        color: #fff !important;
+        background: rgba(34,211,238,.18) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 0 28px rgba(34,211,238,.25);
+    }
+
+    .dl-table {
+        color: #eaf6ff !important;
+        margin: 0;
+    }
+
+    .dl-table thead th {
+        background: rgba(255,255,255,.06) !important;
+        color: #a9c8dc !important;
+        border-color: rgba(125,211,252,.14) !important;
+        font-size: .78rem;
+        letter-spacing: .075em;
+        text-transform: uppercase;
+        font-weight: 900;
+        padding: 15px 14px;
+    }
+
+    .dl-table tbody td {
+        color: #eaf6ff !important;
+        border-color: rgba(125,211,252,.12) !important;
+        padding: 16px 14px;
+        vertical-align: middle;
+        font-weight: 650;
+    }
+
+    .dl-table tbody tr {
+        transition: .22s ease;
+    }
+
+    .dl-table tbody tr:hover {
+        background: rgba(34,211,238,.075) !important;
+        transform: scale(1.004);
+    }
+
+    .dl-table code {
+        color: #f472b6 !important;
+        font-weight: 850;
+    }
+
+    .method-badge {
+        color: #eaf6ff !important;
+        background: rgba(255,255,255,.10) !important;
+        border: 1px solid rgba(255,255,255,.10);
+        border-radius: 10px;
+        padding: .42rem .62rem;
+        font-weight: 850;
+    }
+
+    .status-allowed {
+        background: linear-gradient(135deg, #16a34a, #22c55e) !important;
+        box-shadow: 0 0 18px rgba(34,197,94,.35);
+        border-radius: 10px;
+        padding: .42rem .68rem;
+        font-weight: 850;
+    }
+
+    .status-denied {
+        background: linear-gradient(135deg, #e11d48, #f43f5e) !important;
+        box-shadow: 0 0 18px rgba(244,63,94,.35);
+        border-radius: 10px;
+        padding: .42rem .68rem;
+        font-weight: 850;
+    }
+
+    .empty-log {
+        color: #9fb4c9 !important;
+        padding: 36px !important;
+    }
+
+    @keyframes dashboardFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(18px);
+        }
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    @keyframes dashboardCardUp {
+        from {
+            opacity: 0;
+            transform: translateY(24px) scale(.97);
+        }
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    @keyframes dashboardShine {
+        0%, 38% {
+            transform: translateX(-130%);
+        }
+        58%, 100% {
+            transform: translateX(130%);
+        }
+    }
+
+    @keyframes dashboardPulseDot {
+        0% {
+            box-shadow: 0 0 0 0 rgba(34,197,94,.70);
+        }
+        70% {
+            box-shadow: 0 0 0 13px rgba(34,197,94,0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(34,197,94,0);
+        }
+    }
+
+    @keyframes sparkDraw {
+        to {
+            stroke-dashoffset: 0;
+        }
+    }
+
+    @keyframes waveDraw {
+        0% {
+            stroke-dashoffset: 400;
+            opacity: .25;
+        }
+        45% {
+            opacity: 1;
+        }
+        100% {
+            stroke-dashoffset: 0;
+            opacity: .25;
+        }
+    }
+
+    @media (max-width: 992px) {
+        .router-panel .card-body {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .router-wave {
+            max-width: 100%;
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-hero {
+            padding: 24px 20px;
+        }
+
+        .premium-stat-card {
+            min-height: 130px;
+            padding: 18px;
+        }
+
+        .premium-stat-icon {
+            width: 58px;
+            height: 58px;
+            flex-basis: 58px;
+        }
+
+        .premium-stat-value {
+            font-size: 2.1rem;
+        }
+
+        .mini-spark {
+            display: none;
+        }
+
+        .dl-table tbody td,
+        .dl-table thead th {
+            padding: 13px 12px;
+            font-size: .9rem;
+        }
+    }
+</style>
+
+<div class="dashboard-page">
+
+    <section class="dashboard-hero">
+        <div class="hero-badge">
+            <span class="hero-dot"></span>
+            DoorLink Control Center
+        </div>
+        <h2>Monitoring Akses Pintu</h2>
+        <p>Ringkasan user, role, log akses, hotspot aktif, dan status MikroTik secara real-time.</p>
+    </section>
+
+    <!-- Stat Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="premium-stat-card">
+                <div class="premium-stat-icon icon-blue">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+
+                <div class="premium-stat-info">
+                    <span class="premium-stat-value count-up" data-count="{{ user_count }}">0</span>
+                    <span class="premium-stat-label">Total Users</span>
+                </div>
+
+                <div class="mini-spark">
+                    <svg viewBox="0 0 120 40">
+                        <path class="spark-blue" d="M2 30 C18 12, 24 36, 40 22 S62 14, 76 22 S94 38, 118 10"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="premium-stat-card">
+                <div class="premium-stat-icon icon-purple">
+                    <i class="bi bi-person-badge-fill"></i>
+                </div>
+
+                <div class="premium-stat-info">
+                    <span class="premium-stat-value count-up" data-count="{{ role_count }}">0</span>
+                    <span class="premium-stat-label">Roles</span>
+                </div>
+
+                <div class="mini-spark">
+                    <svg viewBox="0 0 120 40">
+                        <path class="spark-purple" d="M2 28 C14 32, 18 8, 32 14 S48 34, 64 18 S86 6, 118 25"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="premium-stat-card">
+                <div class="premium-stat-icon icon-teal">
+                    <i class="bi bi-journal-text"></i>
+                </div>
+
+                <div class="premium-stat-info">
+                    <span class="premium-stat-value count-up" data-count="{{ log_count }}">0</span>
+                    <span class="premium-stat-label">Access Logs</span>
+                </div>
+
+                <div class="mini-spark">
+                    <svg viewBox="0 0 120 40">
+                        <path class="spark-teal" d="M2 24 C16 4, 26 38, 42 22 S62 22, 76 14 S92 22, 118 8"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="premium-stat-card">
+                <div class="premium-stat-icon icon-orange">
+                    <i class="bi bi-wifi"></i>
+                </div>
+
+                <div class="premium-stat-info">
+                    <span class="premium-stat-value count-up" data-count="{{ hotspot_active_count }}">0</span>
+                    <span class="premium-stat-label">Hotspot Active</span>
+                </div>
+
+                <div class="mini-spark">
+                    <svg viewBox="0 0 120 40">
+                        <path class="spark-orange" d="M2 31 C18 18, 26 36, 42 28 S58 10, 76 17 S94 34, 118 16"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Access Logs -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card dashboard-panel">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="bi bi-clock-history me-2"></i>5 Log Akses Terbaru
+                    </h6>
+
+                    <a href="/dashboard/doorlink/admin/logs" class="btn btn-sm btn-outline-primary">
+                        Lihat Semua
+                    </a>
+                </div>
+
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table dl-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Waktu</th>
+                                    <th>Username</th>
+                                    <th>Method</th>
+                                    <th>Status</th>
+                                    <th>Message</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {% for log in recent_logs %}
+                                <tr>
+                                    <td class="text-nowrap">
+                                        {{ log.created_at.strftime('%d %b %Y %H:%M') if log.created_at else '-' }}
+                                    </td>
+
+                                    <td>
+                                        <code>{{ log.username }}</code>
+                                    </td>
+
+                                    <td>
+                                        <span class="badge method-badge">
+                                            {{ log.method }}
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        {% if log.status == 'allowed' %}
+                                            <span class="badge status-allowed">Allowed</span>
+                                        {% else %}
+                                            <span class="badge status-denied">Denied</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td>{{ log.message }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center empty-log">
+                                        Belum ada log akses.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Recent Access Logs -->
-<div class="row">
-    <div class="col-12">
-        <div class="card dl-card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>5 Log Akses Terbaru</h6>
-                <a href="/dashboard/logs" class="btn btn-sm btn-outline-primary">Lihat Semua</a>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table dl-table mb-0">
-                        <thead>
-                            <tr>
-                                <th>Waktu</th>
-                                <th>Username</th>
-                                <th>Method</th>
-                                <th>Status</th>
-                                <th>Message</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for log in recent_logs %}
-                            <tr>
-                                <td class="text-nowrap">{{ log.created_at.strftime('%d %b %Y %H:%M') if log.created_at else '-' }}</td>
-                                <td><code>{{ log.username }}</code></td>
-                                <td><span class="badge bg-light text-dark">{{ log.method }}</span></td>
-                                <td>
-                                    {% if log.status == 'allowed' %}
-                                        <span class="badge bg-success">Allowed</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">Denied</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ log.message }}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="5" class="text-center text-muted py-4">Belum ada log akses.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+<script>
+    document.querySelectorAll('.count-up').forEach(function(el) {
+        const target = parseInt(el.dataset.count || '0', 10);
+        const duration = 850;
+        const start = performance.now();
+
+        function animate(now) {
+            const progress = Math.min((now - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.floor(eased * target);
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                el.textContent = target;
+            }
+        }
+
+        requestAnimationFrame(animate);
+    });
+</script>
+
 {% endblock %}

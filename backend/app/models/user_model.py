@@ -1,8 +1,11 @@
 from sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import datetime
+from datetime import timedelta
 
 
+def wib_now():
+    return datetime.utcnow() + timedelta(hours=7)
 class User(SQLModel, table=True):
     """Tabel users — data user lokal DoorLink."""
 
@@ -15,4 +18,7 @@ class User(SQLModel, table=True):
     role_name: str = Field(index=True)
     room_number: Optional[str] = None
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(
+    default_factory=wib_now
+)
+

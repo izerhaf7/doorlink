@@ -1,76 +1,109 @@
+import logging
+
 import requests
 from fastapi import HTTPException
 from app.config import MIKROTIK_HOST, MIKROTIK_USER, MIKROTIK_PASSWORD
 
 
-class MikroTikService:
-    """Service class untuk komunikasi dengan MikroTik RouterOS REST API."""
+logger = logging.getLogger(__name__)
 
+
+class MikroTikService:
     def __init__(self):
-        self.base_url = f"http://{MIKROTIK_HOST}"
+        self.base_url = f"http://{MIKROTIK_HOST}".rstrip("/")
         self.auth = (MIKROTIK_USER, MIKROTIK_PASSWORD)
+        self.session = requests.Session()
+        self.session.trust_env = False
 
     def _request(self, method: str, path: str, json_data: dict = None) -> dict | list:
-        """
-        Helper method untuk mengirim HTTP request ke MikroTik REST API.
-        Menangani error koneksi dan response non-2xx.
-        """
         url = f"{self.base_url}{path}"
+        method = method.upper()
+        logger.info("MikroTik request method=%s url=%s", method, url)
 
         try:
-            response = requests.request(
+            response = self.session.request(
                 method=method,
                 url=url,
                 auth=self.auth,
                 json=json_data,
                 timeout=10,
             )
-        except requests.ConnectionError:
+        except requests.exceptions.ConnectionError as e:
+            logger.exception("MikroTik connection error method=%s url=%s", method, url)
             raise HTTPException(
                 status_code=503,
-                detail=f"Tidak dapat terhubung ke MikroTik di {MIKROTIK_HOST}",
+                detail=f"Tidak dapat terhubung ke MikroTik di {MIKROTIK_HOST}: {repr(e)}",
             )
-        except requests.Timeout:
+        except requests.exceptions.Timeout as e:
+            logger.exception("MikroTik timeout method=%s url=%s", method, url)
             raise HTTPException(
                 status_code=504,
-                detail="Request ke MikroTik timeout",
+                detail=f"Request ke MikroTik timeout: {repr(e)}",
             )
+        except Exception as e:
+            logger.exception("MikroTik unknown error method=%s url=%s", method, url)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error MikroTik tidak dikenal: {repr(e)}",
+            )
+
+        logger.info(
+            "MikroTik response method=%s url=%s status_code=%s",
+            method,
+            url,
+            response.status_code,
+        )
 
         if not response.ok:
+            error_text = response.text[:300]
+            logger.warning(
+                "MikroTik API error method=%s url=%s status_code=%s response=%s",
+                method,
+                url,
+                response.status_code,
+                error_text,
+            )
             raise HTTPException(
                 status_code=response.status_code,
-                detail=f"MikroTik API error: {response.text}",
+                detail=f"MikroTik API error: {error_text}",
             )
 
-        return response.json()
+        if not response.text.strip():
+            return {}
 
-    # ── System ──────────────────────────────────────────────
+        try:
+            return response.json()
+        except ValueError as e:
+            logger.exception(
+                "MikroTik invalid JSON method=%s url=%s status_code=%s response=%s",
+                method,
+                url,
+                response.status_code,
+                response.text[:300],
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=f"Response MikroTik bukan JSON valid: {response.text[:300]}",
+            ) from e
 
     def get_system_resource(self) -> dict:
-        """GET /rest/system/resource — info CPU, RAM, uptime, dsb."""
         return self._request("GET", "/rest/system/resource")
 
-    # ── Hotspot Users ───────────────────────────────────────
-
     def get_hotspot_users(self) -> list:
-        """GET /rest/ip/hotspot/user — daftar semua user hotspot."""
         return self._request("GET", "/rest/ip/hotspot/user")
 
     def create_hotspot_user(self, name: str, password: str, profile: str = "default") -> dict:
-        """POST /rest/ip/hotspot/user — buat user hotspot baru."""
         payload = {
             "name": name,
             "password": password,
             "profile": profile,
         }
-        return self._request("POST", "/rest/ip/hotspot/user/add", json_data=payload)
-
-    # ── Hotspot Active ──────────────────────────────────────
+        # RouterOS v7 REST creates new resources by sending the payload to the
+        # collection endpoint, not to the console-style /add path.
+        return self._request("PUT", "/rest/ip/hotspot/user", json_data=payload)
 
     def get_hotspot_active(self) -> list:
-        """GET /rest/ip/hotspot/active — daftar session aktif."""
         return self._request("GET", "/rest/ip/hotspot/active")
 
 
-# Singleton instance agar tidak perlu inisialisasi ulang di setiap router
 mikrotik_service = MikroTikService()
